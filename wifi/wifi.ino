@@ -1,7 +1,19 @@
 #include <ESP8266WiFi.h>        // Include the Wi-Fi library
+#include <ESP8266HTTPClient.h>
+#include <WiFiClient.h>
 
 const char* ssid     = "ANUVIND";         // The SSID (name) of the Wi-Fi network you want to connect to
-const char* password = "anuvind7";     // The password of the Wi-Fi network
+const char* password = "anuvind7";
+
+const char* serverName = "https://63a2e005471b38b206ff1585.mockapi.io/wgdrive";
+
+// the following variables are unsigned longs because the time, measured in
+// milliseconds, will quickly become a bigger number than can be stored in an int.
+unsigned long lastTime = 0;
+// Timer set to 10 minutes (600000)
+//unsigned long timerDelay = 600000;
+// Set timer to 5 seconds (5000)
+unsigned long timerDelay = 5000;
 
 void setup() {
   Serial.begin(9600);         // Start the Serial communication to send messages to the computer
@@ -25,5 +37,36 @@ void setup() {
 }
 
 void loop() { 
+  //Send an HTTP POST request every 10 minutes
+  if ((millis() - lastTime) > timerDelay) {
+    //Check WiFi connection status
+    if(WiFi.status()== WL_CONNECTED){
+      WiFiClient client;
+      HTTPClient http;
+      
+      // Your Domain name with URL path or IP address with path
+      http.begin(client, serverName);
   
+        int httpResponseCode = http.GET();
+
+      String payload = "{}"; 
+    
+      if (httpResponseCode>0) {
+        Serial.print("HTTP Response code: ");
+        Serial.println(httpResponseCode);
+        payload = http.getString();
+      }
+      else {
+        Serial.print("Error code: ");
+        Serial.println(httpResponseCode);
+      }
+      // Free resources
+      http.end();
+    }
+    else {
+      Serial.println("WiFi Disconnected");
+    }
+    lastTime = millis();
+  }
+
   }
