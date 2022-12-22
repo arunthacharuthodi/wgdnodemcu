@@ -2,10 +2,9 @@
 #include <ESP8266HTTPClient.h>
 #include <WiFiClient.h>
 
-const char* ssid     = "ANUVIND";         // The SSID (name) of the Wi-Fi network you want to connect to
-const char* password = "anuvind7";
-
-const char* serverName = "https://63a2e005471b38b206ff1585.mockapi.io/wgdrive";
+const char* ssid     = "user-Lenovo-V330-14IKB";         // The SSID (name) of the Wi-Fi network you want to connect to
+const char* password = "PwF5CU8v";
+const char* serverName = "http://10.42.0.216:3000/analytics";
 
 // the following variables are unsigned longs because the time, measured in
 // milliseconds, will quickly become a bigger number than can be stored in an int.
@@ -46,7 +45,7 @@ void loop() {
       
       // Your Domain name with URL path or IP address with path
       http.begin(client, serverName);
-  
+      Serial.println(serverName);
         int httpResponseCode = http.GET();
 
       String payload = "{}"; 
