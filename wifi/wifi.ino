@@ -1,30 +1,72 @@
-#include <ESP8266WiFi.h>        // Include the Wi-Fi library
-#include <ESP8266HTTPClient.h>
-#include <WiFiClient.h>
+#include <Arduino.h>
 
-const char* ssid     = "user-Lenovo-V330-14IKB";         // The SSID (name) of the Wi-Fi network you want to connect to
-const char* password = "PwF5CU8v";
-const char* serverName = "http://10.42.0.216:3000/analytics";
+#include <ESP8266WiFi.h>
+#include <ESP8266WiFiMulti.h>
 
-// the following variables are unsigned longs because the time, measured in
-// milliseconds, will quickly become a bigger number than can be stored in an int.
-unsigned long lastTime = 0;
-// Timer set to 10 minutes (600000)
-//unsigned long timerDelay = 600000;
-// Set timer to 5 seconds (5000)
-unsigned long timerDelay = 5000;
+#include <ArduinoJson.h>
+
+#include <WebSocketsClient.h>
+#include <SocketIOclient.h>
+
+#include <Hash.h>
+
+SocketIOclient socketIO;
+ const int PWM_PIN = D1;
+ int DUTY_RATIO = 127;
+
+
+void socketIOEvent(socketIOmessageType_t type, uint8_t * payload, size_t length) {
+    switch(type) {
+        case sIOtype_DISCONNECT:
+            Serial.printf("[IOc] Disconnected!\n");
+            break;
+        case sIOtype_CONNECT:
+            Serial.printf("[IOc] Connected to url: %s\n", payload);
+
+            // join default namespace (no auto join in Socket.IO V3)
+            socketIO.send(sIOtype_CONNECT, "/nodemcu");
+            break;
+        case sIOtype_EVENT:
+            Serial.printf("[IOc] get event: %s\n", payload);
+            break;
+        case sIOtype_ACK:
+            Serial.printf("[IOc] get ack: %u\n", length);
+            hexdump(payload, length);
+            break;
+        case sIOtype_ERROR:
+            Serial.printf("[IOc] get error: %u\n", length);
+            hexdump(payload, length);
+            break;
+        case sIOtype_BINARY_EVENT:
+            Serial.printf("[IOc] get binary: %u\n", length);
+            hexdump(payload, length);
+            break;
+        case sIOtype_BINARY_ACK:
+            Serial.printf("[IOc] get binary ack: %u\n", length);
+            hexdump(payload, length);
+            break;
+    }
+}
+
+
+const char* ssid     = "MIA3";        
+const char* password = "arun@root1";
 
 void setup() {
-  Serial.begin(9600);         // Start the Serial communication to send messages to the computer
-  delay(10);
-  Serial.println('\n');
-  
-  WiFi.begin(ssid, password);             // Connect to the network
+  Serial.begin(9600);         
+//pwm generation
+  pinMode(PWM_PIN, OUTPUT);
+
+  // Set the PWM frequency to 10kHz on GPIO5 (D1 pin)
+  analogWriteFreq(10000);
+  analogWrite(PWM_PIN, DUTY_RATIO);
+  //network connection
+  WiFi.begin(ssid, password);            
   Serial.print("Connecting to ");
   Serial.print(ssid); Serial.println(" ...");
 
   int i = 0;
-  while (WiFi.status() != WL_CONNECTED) { // Wait for the Wi-Fi to connect
+  while (WiFi.status() != WL_CONNECTED) {
     delay(1000);
     Serial.print(++i); Serial.print(' ');
   }
@@ -32,40 +74,38 @@ void setup() {
   Serial.println('\n');
   Serial.println("Connection established!");  
   Serial.print("IP address:\t");
-  Serial.println(WiFi.localIP());         // Send the IP address of the ESP8266 to the computer
+  Serial.println(WiFi.localIP());    
+  
+  
+       // websocks
+   // server address, port and URL
+    socketIO.begin("192.168.50.36", 443, "/socket.io/?EIO=4");
+
+    // event handler
+    socketIO.onEvent(socketIOEvent);
+	// try ever 500 again if connection has failed
+	// webSocket.setReconnectInterval(500);
+
+
+
+
+
+
 }
-
 void loop() { 
-  //Send an HTTP POST request every 10 minutes
-  if ((millis() - lastTime) > timerDelay) {
-    //Check WiFi connection status
-    if(WiFi.status()== WL_CONNECTED){
-      WiFiClient client;
-      HTTPClient http;
-      
-      // Your Domain name with URL path or IP address with path
-      http.begin(client, serverName);
-      Serial.println(serverName);
-        int httpResponseCode = http.GET();
-
-      String payload = "{}"; 
-    
-      if (httpResponseCode>0) {
-        Serial.print("HTTP Response code: ");
-        Serial.println(httpResponseCode);
-        payload = http.getString();
-      }
-      else {
-        Serial.print("Error code: ");
-        Serial.println(httpResponseCode);
-      }
-      // Free resources
-      http.end();
-    }
-    else {
-      Serial.println("WiFi Disconnected");
-    }
-    lastTime = millis();
+	socketIO.loop();
   }
 
-  }
+
+
+
+
+
+
+
+
+
+
+
+
+
